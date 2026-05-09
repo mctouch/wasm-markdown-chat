@@ -91,13 +91,24 @@
             border: none;
             background: transparent;
             z-index: 20;
-            pointer-events: none; /* Let clicks/wheel pass through to chat canvas */
+            pointer-events: none;
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #avatar-panel.avatar-idle {
+            top: 50%;
+            left: 50%;
+            right: auto;
+            width: min(80vw, 80vh * 0.77);
+            height: min(80vh, 80vw / 0.77);
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            border-radius: 16px;
         }
         #avatar-canvas {
             width: 100%;
             height: 100%;
             display: block;
-            pointer-events: auto; /* Re-enable for the canvas itself if needed */
+            pointer-events: auto;
         }
     </style>
 </head>
@@ -732,6 +743,34 @@
                 }
             });
         }
+        // Mouse idle detection: avatar scales to center when idle, shrinks to corner on activity
+        const avatarPanel = document.getElementById('avatar-panel');
+        let idleTimer = null;
+        const IDLE_DELAY_MS = 2000; // 2 seconds of inactivity before expanding
+
+        function setAvatarIdle(isIdle) {
+            if (!avatarPanel) return;
+            if (isIdle) {
+                avatarPanel.classList.add('avatar-idle');
+            } else {
+                avatarPanel.classList.remove('avatar-idle');
+            }
+        }
+
+        function resetIdleTimer() {
+            setAvatarIdle(false);
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => setAvatarIdle(true), IDLE_DELAY_MS);
+        }
+
+        window.addEventListener('mousemove', resetIdleTimer);
+        window.addEventListener('mousedown', resetIdleTimer);
+        window.addEventListener('keydown', resetIdleTimer);
+        window.addEventListener('scroll', resetIdleTimer);
+        window.addEventListener('touchstart', resetIdleTimer);
+        // Start idle timer initially — avatar will expand after first 2s if no interaction
+        idleTimer = setTimeout(() => setAvatarIdle(true), IDLE_DELAY_MS);
+
         run().catch(e => {
             console.error(e);
             document.getElementById('loading').textContent = 'Error: ' + e;
