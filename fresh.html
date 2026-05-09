@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+html,body{margin:0;width:100%;height:100%;background:#000}
+#c{width:100%;height:100%;display:block}
+#l{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-family:system-ui}
+</style>
+</head>
+<body>
+<div id="l">Loading...</div>
+<canvas id="c"></canvas>
+<script type="module">
+import init, { test_render } from './pkg/wasm_markdown_chat.js?v=999';
+async function run() {
+  await init();
+  await test_render();
+  document.getElementById('l').style.display='none';
+}
+run().catch(e => { console.error(e); document.getElementById('l').textContent='Error: '+e; });
+</script>
+</body>
+</html>
