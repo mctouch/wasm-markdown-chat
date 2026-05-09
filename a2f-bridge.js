@@ -65,9 +65,6 @@ class A2FBridge {
             return;
         }
 
-        // Play back recorded audio locally
-        this._playBuffer(floatSamples, 16000);
-
         if (this.audioCtx) {
             await this.audioCtx.close();
         }
@@ -151,7 +148,10 @@ class A2FBridge {
 
             this.onStatus(`Got ${frames.length} frames`);
             if (frames.length > 0) {
-                this._playbackFrames(frames);
+                const durationSec = floatSamples.length / 16000;
+                // Start audio and blendshape playback together so they stay in sync
+                this._playBuffer(floatSamples, 16000);
+                this._playbackFrames(frames, durationSec);
             } else {
                 this.onDone();
             }
@@ -162,7 +162,8 @@ class A2FBridge {
         }
     }
 
-    _playbackFrames(frames) {
+    _playbackFrames(frames, audioDurationSec) {
+        const intervalMs = (audioDurationSec * 1000) / frames.length;
         let idx = 0;
         const interval = setInterval(() => {
             if (idx >= frames.length) {
@@ -174,7 +175,7 @@ class A2FBridge {
             }
             this.onBlendshapes(frames[idx]);
             idx++;
-        }, 33);
+        }, intervalMs);
     }
 }
 
