@@ -28,28 +28,7 @@ pub struct App {
 impl App {
     pub async fn new() -> Self {
         let theme = Theme::dark();
-        let markdown = r#"# Welcome to WASM WebGPU Markdown Chat
-
-This is a **real-time** markdown renderer built with **Rust + WebGPU**.
-
-## Features
-- Smooth GPU-accelerated scrolling
-- Syntax-highlighted code blocks
-- Image display
-- Multi-turn AI chat via Kimi API
-
-```rust
-fn main() {
-    println!("Hello, WebGPU!");
-}
-```
-
-> This is a blockquote. The future of web rendering is here.
-
----
-
-*Built by a multi-agent swarm*
-"#;
+        let markdown = r#"*Welcome — ask Kimi anything!*"#;
 
         let mut doc = parse_markdown(markdown);
         let engine = LayoutEngine::new(800.0, theme.clone());
