@@ -263,6 +263,9 @@
                 // Start avatar render loop
                 let lastT = performance.now();
                 let demoT = 0;
+                let nextBlinkTime = 2 + Math.random() * 58; // first blink 2-60s after init
+                let blinkProgress = 0;
+                let isBlinking = false;
                 visemeAnimator = new window.VisemeAnimator();
                 window.__visemeAnimator = visemeAnimator;
 
@@ -282,9 +285,25 @@
                             window.visemeSyncWeights = visemeSyncPlayer.getCurrentWeights(audioCtx.currentTime);
                             merged = window.visemeSyncWeights;
                         } else {
-                            // 1. Idle animation (blink, subtle brow)
-                            const blink = (Math.sin(demoT * 0.5) * 0.5 + 0.5) * 0.05;
+                            // 1. Idle animation (random blink, subtle brow)
                             const idleWeights = new Float32Array(52);
+
+                            // Random blink: trigger every 60-120 seconds, blink lasts ~150ms
+                            if (!isBlinking && demoT >= nextBlinkTime) {
+                                isBlinking = true;
+                                blinkProgress = 0;
+                            }
+                            let blink = 0;
+                            if (isBlinking) {
+                                blinkProgress += dt / 0.15; // 150ms full blink cycle
+                                if (blinkProgress >= 1) {
+                                    isBlinking = false;
+                                    nextBlinkTime = demoT + 60 + Math.random() * 60;
+                                } else {
+                                    // Parabolic blink: fast close, hold slightly, fast open
+                                    blink = Math.sin(blinkProgress * Math.PI) * 0.8;
+                                }
+                            }
                             idleWeights[window.ARKIT_ORDER.indexOf('eyeBlinkLeft')] = blink;
                             idleWeights[window.ARKIT_ORDER.indexOf('eyeBlinkRight')] = blink;
                             idleWeights[window.ARKIT_ORDER.indexOf('browInnerUp')] = Math.abs(Math.sin(demoT * 0.3)) * 0.08;
