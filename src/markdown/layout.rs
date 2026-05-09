@@ -46,7 +46,7 @@ impl LayoutEngine {
         };
         match kind {
             MdElementKind::Paragraph(spans) => {
-                let line_count = self.estimate_text_lines(spans, text_width.max(100.0));
+                let line_count = self.estimate_text_lines(spans, text_width.max(100.0), self.theme.font_size_base);
                 let line_height = self.theme.font_size_base * self.theme.line_height;
                 // Tighter spacing for bubble messages
                 let (mt, mb) = if role.is_some() {
@@ -57,16 +57,10 @@ impl LayoutEngine {
                 (line_count * line_height, mt, mb)
             }
             MdElementKind::Heading { level, text } => {
-                let scale = match level {
-                    1 => 2.0,
-                    2 => 1.75,
-                    3 => 1.5,
-                    4 => 1.25,
-                    5 => 1.1,
-                    _ => 1.0,
-                };
+                // Match renderer.rs heading scale exactly
+                let scale = 1.8 - (*level as f32 * 0.15);
                 let font_size = self.theme.font_size_base * scale;
-                let line_count = self.estimate_text_lines(text, text_width.max(100.0));
+                let line_count = self.estimate_text_lines(text, text_width.max(100.0), font_size);
                 (line_count * font_size * 1.3, self.theme.margin_heading, self.theme.margin_heading * 0.5)
             }
             MdElementKind::CodeBlock { code, .. } => {
@@ -97,7 +91,7 @@ impl LayoutEngine {
                 (2.0, self.theme.margin_paragraph, self.theme.margin_paragraph)
             }
             MdElementKind::TaskItem { text, .. } => {
-                let line_count = self.estimate_text_lines(text, text_width.max(100.0) - 24.0);
+                let line_count = self.estimate_text_lines(text, text_width.max(100.0) - 24.0, self.theme.font_size_base);
                 (line_count * self.theme.font_size_base * self.theme.line_height, self.theme.margin_paragraph, self.theme.margin_paragraph)
             }
             MdElementKind::BlockQuote { children } => {
@@ -112,13 +106,78 @@ impl LayoutEngine {
         }
     }
 
-    fn estimate_text_lines(&self, spans: &[TextSpan], width: f32) -> f32 {
-        let total_chars: usize = spans.iter().map(|s| s.text.chars().count()).sum();
-        let newline_count: usize = spans.iter().map(|s| s.text.matches('\n').count()).sum();
-        // Use a conservative estimate (0.45 instead of 0.55) to account for word wrapping
-        // and variable-width glyphs, preventing text overlap
-        let chars_per_line = (width / (self.theme.font_size_base * 0.45)).max(10.0) as usize;
-        let wrapped_lines = (total_chars / chars_per_line.max(1)) + 1;
-        (wrapped_lines.max(newline_count + 1)).max(1) as f32
+    /// Word-aware text line estimation that respects word boundaries for wrapping,
+    /// accounts for different font sizes, and handles explicit newlines.
+    fn estimate_text_lines(&self, spans: &[TextSpan], width: f32, font_size: f32) -> f32 {
+        if width <= 0.0 || spans.is_empty() {
+            return 1.0;
+        }
+
+        let mut line_count = 0.0f32;
+        let mut current_width = 0.0f32;
+        let space_width = font_size * 0.28;
+
+        for span in spans {
+            // Adjust avg char width based on style
+            let avg_char_width = font_size * if span.bold {
+                0.55
+            } else if span.code {
+                0.6
+            } else if span.italic {
+                0.50
+            } else {
+                0.48
+            };
+
+            // Split by explicit newlines first
+            let segments: Vec<&str> = span.text.split('\n').collect();
+
+            for (seg_idx, segment) in segments.iter().enumerate() {
+                // Each segment after the first is preceded by an explicit newline
+                if seg_idx > 0 {
+                    line_count += 1.0;
+                    current_width = 0.0;
+                }
+
+                let words: Vec<&str> = segment.split_whitespace().collect();
+                for word in words {
+                    let word_width = word.chars().count() as f32 * avg_char_width;
+
+                    if current_width == 0.0 {
+                        // First word on this line
+                        if word_width > width {
+                            // Word is longer than the line width, force break
+                            // Count how many line-width chunks it needs
+                            let word_lines = (word_width / width).ceil();
+                            line_count += word_lines;
+                            // Remainder goes on current line (will be near full)
+                            current_width = word_width - (word_lines - 1.0) * width;
+                        } else {
+                            current_width = word_width;
+                        }
+                    } else if current_width + space_width + word_width > width {
+                        // Word doesn't fit, wrap to next line
+                        line_count += 1.0;
+                        if word_width > width {
+                            let word_lines = (word_width / width).ceil();
+                            line_count += word_lines - 1.0;
+                            current_width = word_width - (word_lines - 1.0) * width;
+                        } else {
+                            current_width = word_width;
+                        }
+                    } else {
+                        // Word fits on current line
+                        current_width += space_width + word_width;
+                    }
+                }
+            }
+        }
+
+        // Count the final line if it has content
+        if current_width > 0.0 || line_count == 0.0 {
+            line_count += 1.0;
+        }
+
+        line_count.max(1.0)
     }
 }
