@@ -124,7 +124,7 @@
         <div id="typing">Kimi is thinking...</div>
         <input type="text" id="message-input" placeholder="Ask Kimi anything..." disabled />
         <button id="talk-btn" disabled>Talk</button>
-        <button id="test-a2f-btn" disabled>Test A2F</button>
+        <button id="test-a2f-btn" disabled>A2F Talk</button>
         <button id="send-btn" disabled>Send</button>
         <div id="voice-controls">
             <select id="voice-select" title="Select voice">
@@ -673,9 +673,44 @@
                 }
             });
 
-            // Test A2F button
-            testA2FBtn.addEventListener('click', () => {
-                if (window.a2fBridge) window.a2fBridge.test();
+            // A2F Talk button: hold to record, release to send to A2F
+            let a2fRecording = false;
+            testA2FBtn.addEventListener('mousedown', () => {
+                if (window.a2fBridge && !a2fRecording) {
+                    a2fRecording = true;
+                    testA2FBtn.classList.add('recording');
+                    window.a2fBridge.startRecording();
+                }
+            });
+            testA2FBtn.addEventListener('mouseup', () => {
+                if (a2fRecording) {
+                    a2fRecording = false;
+                    testA2FBtn.classList.remove('recording');
+                    if (window.a2fBridge) window.a2fBridge.stopRecording();
+                }
+            });
+            testA2FBtn.addEventListener('mouseleave', () => {
+                if (a2fRecording) {
+                    a2fRecording = false;
+                    testA2FBtn.classList.remove('recording');
+                    if (window.a2fBridge) window.a2fBridge.stopRecording();
+                }
+            });
+            testA2FBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (window.a2fBridge && !a2fRecording) {
+                    a2fRecording = true;
+                    testA2FBtn.classList.add('recording');
+                    window.a2fBridge.startRecording();
+                }
+            });
+            testA2FBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if (a2fRecording) {
+                    a2fRecording = false;
+                    testA2FBtn.classList.remove('recording');
+                    if (window.a2fBridge) window.a2fBridge.stopRecording();
+                }
             });
         }
         run().catch(e => {

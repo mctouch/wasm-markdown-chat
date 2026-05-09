@@ -56,17 +56,37 @@ class A2FBridge {
         if (this.stream) {
             this.stream.getTracks().forEach(t => t.stop());
         }
-        if (this.audioCtx) {
-            await this.audioCtx.close();
-        }
 
         const floatSamples = new Float32Array(this.pcmBuffer);
         if (floatSamples.length < 1600) {
             this.onStatus('Too short');
             this.onDone();
+            if (this.audioCtx) await this.audioCtx.close();
             return;
         }
+
+        // Play back recorded audio locally
+        this._playBuffer(floatSamples, 16000);
+
+        if (this.audioCtx) {
+            await this.audioCtx.close();
+        }
         await this._sendToA2F(floatSamples);
+    }
+
+    _playBuffer(floatSamples, sampleRate) {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate });
+            const buffer = ctx.createBuffer(1, floatSamples.length, sampleRate);
+            buffer.copyToChannel(floatSamples, 0);
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(ctx.destination);
+            source.start();
+            source.onended = () => ctx.close();
+        } catch (e) {
+            console.warn('[A2F] playback error:', e);
+        }
     }
 
     async test() {
