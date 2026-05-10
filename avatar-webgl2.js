@@ -44,6 +44,7 @@ class WebGL2AvatarRenderer {
         this.workNormals = new Float32Array(this.mesh.vertexCount * 3);
 
         this.setupGL();
+        this.centerCamera();
     }
 
     parseGLB(data) {
