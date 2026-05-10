@@ -12,6 +12,7 @@ COPY viseme-sync.js /usr/share/nginx/html/
 COPY piper-tts.js /usr/share/nginx/html/
 COPY a2f-bridge.js /usr/share/nginx/html/
 COPY avatar.glb /usr/share/nginx/html/
+COPY favicon.ico /usr/share/nginx/html/
 COPY assets/ /usr/share/nginx/html/assets/
 COPY pkg/ /usr/share/nginx/html/pkg/
 COPY fonts/ /usr/share/nginx/html/fonts/
