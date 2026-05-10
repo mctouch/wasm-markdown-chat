@@ -70,38 +70,39 @@ class WebGL2AvatarRenderer {
     _buildDrawList({ json, bin }) {
         const gl = this.gl;
         // Create a single reusable material-color shader
-        const vs = `
-            #version 300 es
-            precision highp float;
-            layout(location=0) in vec3 aPos;
-            layout(location=1) in vec3 aNorm;
-            uniform mat4 uMV, uP;
-            uniform mat3 uN;
-            out vec3 vN, vP;
-            void main(){
-                vec4 mv = uMV * vec4(aPos,1.0);
-                gl_Position = uP * mv;
-                vN = normalize(uN * aNorm);
-                vP = aPos;
-            }
-        `;
-        const fs = `
-            #version 300 es
-            precision highp float;
-            in vec3 vN, vP;
-            out vec4 oCol;
-            uniform vec3 uBaseColor;
-            void main(){
-                vec3 L = normalize(vec3(0.5,1.0,0.5));
-                float diff = max(dot(normalize(vN), L), 0.0);
-                float amb  = 0.55;
-                vec3 col = uBaseColor * (amb + diff * 0.55);
-                float rim = 1.0 - max(dot(normalize(-vP), normalize(vN)), 0.0);
-                col += vec3(0.3,0.4,0.5) * pow(rim,3.0) * 0.2;
-                oCol = vec4(mix(vec3(0.05,0.05,0.08), col, clamp(exp(-length(vP)*length(vP)*0.0005),0.0,1.0)), 1.0);
-            }
-        `;
-        this.prog = this._compile(vs, fs);
+        const vsSource = [
+            '#version 300 es',
+            'precision highp float;',
+            'layout(location = 0) in vec3 aPos;',
+            'layout(location = 1) in vec3 aNorm;',
+            'uniform mat4 uMV, uP;',
+            'uniform mat3 uN;',
+            'out vec3 vN, vP;',
+            'void main(){',
+            '    vec4 mv = uMV * vec4(aPos, 1.0);',
+            '    gl_Position = uP * mv;',
+            '    vN = normalize(uN * aNorm);',
+            '    vP = aPos;',
+            '}'
+        ].join('\n');
+
+        const fsSource = [
+            '#version 300 es',
+            'precision highp float;',
+            'in vec3 vN, vP;',
+            'out vec4 oCol;',
+            'uniform vec3 uBaseColor;',
+            'void main(){',
+            '    vec3 L = normalize(vec3(0.5, 1.0, 0.5));',
+            '    float diff = max(dot(normalize(vN), L), 0.0);',
+            '    float amb = 0.55;',
+            '    vec3 col = uBaseColor * (amb + diff * 0.55);',
+            '    float rim = 1.0 - max(dot(normalize(-vP), normalize(vN)), 0.0);',
+            '    col += vec3(0.3, 0.4, 0.5) * pow(rim, 3.0) * 0.2;',
+            '    oCol = vec4(mix(vec3(0.05, 0.05, 0.08), col, clamp(exp(-dot(vP, vP) * 0.0005), 0.0, 1.0)), 1.0);',
+            '}'
+        ].join('\n');
+        this.prog = this._compile(vsSource, fsSource);
         this.uloc = {
             mv: gl.getUniformLocation(this.prog, 'uMV'),
             p:  gl.getUniformLocation(this.prog, 'uP'),
@@ -269,11 +270,11 @@ class WebGL2AvatarRenderer {
     _compile(vsSrc, fsSrc) {
         const gl = this.gl;
         const vs = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vs, vsSrc);
+        gl.shaderSource(vs, vsSrc.trim());
         gl.compileShader(vs);
         if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) throw new Error('VS: ' + gl.getShaderInfoLog(vs));
         const fs = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fs, fsSrc);
+        gl.shaderSource(fs, fsSrc.trim());
         gl.compileShader(fs);
         if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) throw new Error('FS: ' + gl.getShaderInfoLog(fs));
         const prog = gl.createProgram();
