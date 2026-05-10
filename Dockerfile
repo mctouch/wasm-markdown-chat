@@ -1,5 +1,8 @@
 FROM nginx:alpine
 
+# Patch nginx mime.types to include .mjs as JavaScript (avoids overriding all types)
+RUN sed -i 's|application/javascript\s*js;|application/javascript js mjs;|' /etc/nginx/mime.types
+
 # Copy app static files explicitly
 COPY index.html /usr/share/nginx/html/
 COPY avatar-webgpu.js /usr/share/nginx/html/
@@ -22,12 +25,6 @@ server {
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
-
-    # Add .mjs MIME type (JS modules)
-    types {
-        application/javascript js mjs;
-        application/wasm wasm;
-    }
 
     # Cache static assets for 30 days
     location ~* \.(wasm|js|mjs|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|glb)$ {

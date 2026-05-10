@@ -190,7 +190,7 @@
                 const voiceSelect = document.getElementById('voice-select');
                 const voice = voiceSelect ? voiceSelect.value : 'en_US-amy-medium';
                 
-                const ttsUrl = window.location.protocol + '//' + window.location.hostname + ':8200/v1/tts/synthesize';
+                const ttsUrl = window.location.protocol + '//' + window.location.hostname + '/api/tts/v1/tts/synthesize';
                 const resp = await fetch(ttsUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -350,7 +350,7 @@
                 window.useVisemeSync = false;
                 // A2F bridge setup
                 window.currentA2FWeights = null;
-                const proxyBase = window.location.protocol + '//' + window.location.hostname + ':8100';
+                const proxyBase = window.location.protocol + '//' + window.location.hostname + '/api/a2f';
                 window.a2fBridge = new window.A2FBridge({
                     proxyUrl: proxyBase + '/v1/audio2face/stream',
                     onBlendshapes: (bsDict) => {
@@ -812,7 +812,7 @@
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
             const voice = document.getElementById('voice-select')?.value || 'en_US-amy-medium';
-            fetch('http://localhost:8200/v1/tts/synthesize', {
+            fetch(window.location.protocol + '//' + window.location.hostname + '/api/tts/v1/tts/synthesize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: text, voice: voice })
