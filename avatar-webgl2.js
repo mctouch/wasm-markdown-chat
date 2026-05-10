@@ -79,23 +79,36 @@ class WebGL2AvatarRenderer {
         const json = glb.json;
         const bin = glb.bin;
 
-        // Find the first mesh with morph targets
+        // Find ALL primitives with morph targets and pick the one with highest max-Y (the face/head)
         let targetMesh = null;
         let targetPrimitive = null;
+        let bestMaxY = -Infinity;
         for (const mesh of json.meshes || []) {
             for (const prim of mesh.primitives) {
                 if (prim.targets && prim.targets.length > 0) {
-                    targetMesh = mesh;
-                    targetPrimitive = prim;
-                    break;
+                    // Compute max Y from position accessor to find the top-most mesh (face)
+                    const posAcc = json.accessors[prim.attributes.POSITION];
+                    const posBV = json.bufferViews[posAcc.bufferView];
+                    const posOff = (posBV.byteOffset || 0) + (posAcc.byteOffset || 0);
+                    const positions = new Float32Array(bin.buffer, bin.byteOffset + posOff, posAcc.count * 3);
+                    let maxY = -Infinity;
+                    for (let i = 0; i < posAcc.count; i++) {
+                        const y = positions[i*3+1];
+                        if (y > maxY) maxY = y;
+                    }
+                    if (maxY > bestMaxY) {
+                        bestMaxY = maxY;
+                        targetMesh = mesh;
+                        targetPrimitive = prim;
+                    }
                 }
             }
-            if (targetPrimitive) break;
         }
 
         if (!targetPrimitive) {
             throw new Error('No morph targets found in GLB');
         }
+        console.log(`[webgl2] Selected head primitive with maxY=${bestMaxY.toFixed(3)}`);
 
         this.blendshapeNames = targetMesh.extras?.targetNames || [];
         console.log(`[webgl2] Blendshapes: ${this.blendshapeNames.length} names`);
