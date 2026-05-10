@@ -13,58 +13,56 @@ use std::sync::{Arc, Mutex};
 static mut APP: Option<Arc<Mutex<App>>> = None;
 
 #[wasm_bindgen]
-pub fn boot_app() -> Result<(), JsValue> {
+pub async fn boot_app() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
     wasm_logger::init(wasm_logger::Config::new(log::Level::Error));
 
-    wasm_bindgen_futures::spawn_local(async {
-        let mut app = App::new().await;
+    let mut app = App::new().await;
 
-        #[cfg(target_arch = "wasm32")]
-        {
-            use web_sys::{window, HtmlCanvasElement};
+    #[cfg(target_arch = "wasm32")]
+    {
+        use web_sys::{window, HtmlCanvasElement};
 
-            let win = window().expect("no window");
-            let doc = win.document().expect("no document");
-            let container = doc.get_element_by_id("canvas-container").expect("no container");
+        let win = window().expect("no window");
+        let doc = win.document().expect("no document");
+        let container = doc.get_element_by_id("canvas-container").expect("no container");
 
-            // Remove old canvas if exists
-            if let Some(old) = doc.get_element_by_id("canvas") {
-                let _ = old.remove();
-            }
-
-            // Create fresh canvas
-            let canvas = doc.create_element("canvas").expect("create canvas");
-            canvas.set_id("canvas");
-            let canvas: HtmlCanvasElement = canvas.dyn_into().expect("cast canvas");
-
-            let container_w = container.client_width() as u32;
-            let container_h = container.client_height() as u32;
-            canvas.set_width(container_w);
-            canvas.set_height(container_h);
-            canvas.style().set_property("width", "100%").ok();
-            canvas.style().set_property("height", "100%").ok();
-            canvas.style().set_property("display", "block").ok();
-
-            container.append_child(&canvas).expect("append canvas");
-
-            app.init_gpu().await;
-            app.set_viewport(container_w as f32, container_h as f32);
-
-            let app = Arc::new(Mutex::new(app));
-            unsafe { APP = Some(app.clone()) };
+        // Remove old canvas if exists
+        if let Some(old) = doc.get_element_by_id("canvas") {
+            let _ = old.remove();
         }
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            app.init_gpu().await;
-            let app = Arc::new(Mutex::new(app));
-            unsafe { APP = Some(app.clone()) };
-            loop {
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            }
+        // Create fresh canvas
+        let canvas = doc.create_element("canvas").expect("create canvas");
+        canvas.set_id("canvas");
+        let canvas: HtmlCanvasElement = canvas.dyn_into().expect("cast canvas");
+
+        let container_w = container.client_width() as u32;
+        let container_h = container.client_height() as u32;
+        canvas.set_width(container_w);
+        canvas.set_height(container_h);
+        canvas.style().set_property("width", "100%").ok();
+        canvas.style().set_property("height", "100%").ok();
+        canvas.style().set_property("display", "block").ok();
+
+        container.append_child(&canvas).expect("append canvas");
+
+        app.init_gpu().await;
+        app.set_viewport(container_w as f32, container_h as f32);
+
+        let app = Arc::new(Mutex::new(app));
+        unsafe { APP = Some(app.clone()) };
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        app.init_gpu().await;
+        let app = Arc::new(Mutex::new(app));
+        unsafe { APP = Some(app.clone()) };
+        loop {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         }
-    });
+    }
 
     Ok(())
 }
