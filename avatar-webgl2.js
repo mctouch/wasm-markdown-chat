@@ -95,11 +95,11 @@ class WebGL2AvatarRenderer {
             'void main(){',
             '    vec3 L = normalize(vec3(0.5, 1.0, 0.5));',
             '    float diff = max(dot(normalize(vN), L), 0.0);',
-            '    float amb = 0.55;',
-            '    vec3 col = uBaseColor * (amb + diff * 0.55);',
+            '    float amb = 0.85;',
+            '    vec3 col = uBaseColor * (amb + diff * 0.35);',
             '    float rim = 1.0 - max(dot(normalize(-vP), normalize(vN)), 0.0);',
-            '    col += vec3(0.3, 0.4, 0.5) * pow(rim, 3.0) * 0.2;',
-            '    oCol = vec4(mix(vec3(0.05, 0.05, 0.08), col, clamp(exp(-dot(vP, vP) * 0.0005), 0.0, 1.0)), 1.0);',
+            '    col += vec3(0.3, 0.4, 0.5) * pow(rim, 3.0) * 0.25;',
+            '    oCol = vec4(col, 1.0);',
             '}'
         ].join('\n');
         this.prog = this._compile(vsSource, fsSource);
@@ -183,11 +183,19 @@ class WebGL2AvatarRenderer {
                 gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
                 if (idxBuf) gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
                 gl.bindVertexArray(null);
-
-                let baseColor = [0.82, 0.62, 0.52]; // skin
+                // Guess material type by primitive characteristics
+                let baseColor = [0.82, 0.62, 0.52]; // default skin
                 if (prim.material !== undefined && json.materials && json.materials[prim.material]) {
-                    const pbr = json.materials[prim.material].pbrMetallicRoughness;
-                    if (pbr && pbr.baseColorFactor) baseColor = pbr.baseColorFactor.slice(0,3);
+                    const mat = json.materials[prim.material];
+                    if (mat.pbrMetallicRoughness && mat.pbrMetallicRoughness.baseColorFactor) {
+                        baseColor = mat.pbrMetallicRoughness.baseColorFactor.slice(0, 3);
+                    }
+                }
+                // Heuristic: if baseColor is white, use primitive size to guess type
+                if (baseColor[0] > 0.99 && baseColor[1] > 0.99 && baseColor[2] > 0.99) {
+                    if (indexCount < 1000) baseColor = [0.7, 0.1, 0.1]; // small = lips/inner mouth (reddish)
+                    else if (indexCount > 8000) baseColor = [0.82, 0.62, 0.52]; // large = main face skin
+                    else baseColor = [0.92, 0.92, 0.95]; // medium = eye white
                 }
 
                 this.drawList.push({
@@ -231,7 +239,7 @@ class WebGL2AvatarRenderer {
                     idxType = idxInfo.type === 'uint16' ? gl.UNSIGNED_SHORT : gl.UNSIGNED_INT;
                     idxBuf = gl.createBuffer();
                     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
-                    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idxInfo.view), gl.STATIC_DRAW);
+                    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idxInfo.view, gl.STATIC_DRAW);
                 }
 
                 const vao = gl.createVertexArray();
