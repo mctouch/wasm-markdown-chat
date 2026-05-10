@@ -322,8 +322,10 @@ class WebGL2AvatarRenderer {
             gl.bufferData(gl.ARRAY_BUFFER, this.workPositions, gl.DYNAMIC_DRAW);
             gl.bindBuffer(gl.ARRAY_BUFFER, draw.normBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, this.workNormals, gl.DYNAMIC_DRAW);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, draw.indexBuffer);
-            gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, draw.indices, gl.STATIC_DRAW);
+            if (draw.indices) {
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, draw.indexBuffer);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, draw.indices, gl.STATIC_DRAW);
+            }
         }
 
         // Setup VAOs
@@ -335,7 +337,9 @@ class WebGL2AvatarRenderer {
             gl.bindBuffer(gl.ARRAY_BUFFER, draw.normBuffer);
             gl.enableVertexAttribArray(1);
             gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, draw.indexBuffer);
+            if (draw.indices) {
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, draw.indexBuffer);
+            }
             gl.bindVertexArray(null);
         }
     }
@@ -382,7 +386,11 @@ class WebGL2AvatarRenderer {
         for (const draw of this.faceDraws) {
             gl.uniform3f(this.uniforms.baseColor, draw.baseColor[0], draw.baseColor[1], draw.baseColor[2]);
             gl.bindVertexArray(draw.vao);
-            gl.drawElements(gl.TRIANGLES, draw.indexCount, draw.indexType, 0);
+            if (draw.indices) {
+                gl.drawElements(gl.TRIANGLES, draw.indexCount, draw.indexType, 0);
+            } else {
+                gl.drawArrays(gl.TRIANGLES, 0, draw.indexCount);
+            }
         }
     }
 
