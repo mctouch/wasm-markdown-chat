@@ -277,11 +277,14 @@
             const canvas = document.getElementById('avatar-canvas');
             if (!canvas) return;
             try {
-                if (navigator.gpu && window.WebGPUAvatarRenderer) {
+                // Safari WebGPU does not support compute shaders for blendshapes; force WebGL2
+                const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                if (navigator.gpu && window.WebGPUAvatarRenderer && !isSafari) {
                     avatarRenderer = new window.WebGPUAvatarRenderer(canvas);
                     await avatarRenderer.init();
                     await avatarRenderer.loadModel('avatar.glb');
                 } else if (window.WebGL2AvatarRenderer) {
+                    if (isSafari) console.log('[avatar] Safari detected, using WebGL2 fallback');
                     avatarRenderer = new window.WebGL2AvatarRenderer(canvas);
                     await avatarRenderer.loadModel('avatar.glb');
                 } else {
