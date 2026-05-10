@@ -29,6 +29,8 @@ class WebGL2AvatarRenderer {
         // Pre-allocated working buffers for morph deformation
         this.workPositions = null;
         this.workNormals = null;
+        // Static draw calls: hair, eyes, teeth, etc. (no morph targets)
+        this.staticDraws = [];
     }
 
     async loadModel(url) {
@@ -37,13 +39,15 @@ class WebGL2AvatarRenderer {
         const glb = this.parseGLB(new Uint8Array(buffer));
         this.mesh = this.extractMesh(glb);
         this.morphTargetCount = this.mesh.morphTargets.length;
-        console.log(`[webgl2] Model loaded: ${this.mesh.vertexCount} vertices, ${this.morphTargetCount} morph targets, ${this.mesh.indices.length} indices`);
+        console.log(`[webgl2] Model loaded: ${this.mesh.vertexCount} vertices, ${this.morphTargetCount} morph targets`);
 
         // Pre-allocate working buffers
         this.workPositions = new Float32Array(this.mesh.vertexCount * 3);
         this.workNormals = new Float32Array(this.mesh.vertexCount * 3);
 
         this.setupGL();
+        this.extractStaticMeshes(glb);
+        this.setupStaticBuffers();
         this.centerCamera();
     }
 
@@ -170,6 +174,77 @@ class WebGL2AvatarRenderer {
         };
     }
 
+    // Extract static meshes (hair, body, eyes) that have no morph targets
+    extractStaticMeshes(glb) {
+        const json = glb.json;
+        const bin = glb.bin;
+        const buffer = bin;
+        const draws = [];
+
+        for (const mesh of json.meshes || []) {
+            // Skip the face mesh (it has morph targets, handled separately)
+            const hasMorphs = mesh.primitives.some(p => p.targets && p.targets.length > 0);
+            if (hasMorphs) continue;
+
+            for (const prim of mesh.primitives) {
+                const posAcc = json.accessors[prim.attributes.POSITION];
+                const posBV = json.bufferViews[posAcc.bufferView];
+                const posOff = (posBV.byteOffset || 0) + (posAcc.byteOffset || 0);
+                const positions = new Float32Array(buffer.buffer, buffer.byteOffset + posOff, posAcc.count * 3);
+
+                // Normals
+                let normals = null;
+                if (prim.attributes.NORMAL !== undefined) {
+                    const normAcc = json.accessors[prim.attributes.NORMAL];
+                    const normBV = json.bufferViews[normAcc.bufferView];
+                    const normOff = (normBV.byteOffset || 0) + (normAcc.byteOffset || 0);
+                    normals = new Float32Array(buffer.buffer, buffer.byteOffset + normOff, normAcc.count * 3);
+                } else {
+                    // Generate flat normals if missing
+                    normals = new Float32Array(posAcc.count * 3);
+                }
+
+                // Indices
+                let indices = null;
+                let indexCount = posAcc.count;
+                if (prim.indices !== undefined) {
+                    const idxAcc = json.accessors[prim.indices];
+                    const idxBV = json.bufferViews[idxAcc.bufferView];
+                    const idxOff = (idxBV.byteOffset || 0) + (idxAcc.byteOffset || 0);
+                    if (idxAcc.componentType === 5123) {
+                        indices = new Uint16Array(buffer.buffer, buffer.byteOffset + idxOff, idxAcc.count);
+                    } else {
+                        indices = new Uint32Array(buffer.buffer, buffer.byteOffset + idxOff, idxAcc.count);
+                    }
+                    indexCount = idxAcc.count;
+                }
+
+                // Guess material type by mesh name and vertex count
+                const meshName = (mesh.name || '').toLowerCase();
+                let baseColor = [0.82, 0.62, 0.52]; // default skin
+                if (meshName.includes('hair')) {
+                    baseColor = [0.15, 0.10, 0.06]; // dark brown hair
+                } else if (meshName.includes('body')) {
+                    baseColor = [0.20, 0.15, 0.12]; // dark clothing/body
+                } else if (meshName.includes('eye')) {
+                    baseColor = [0.9, 0.9, 0.95]; // eye white
+                }
+
+                draws.push({
+                    positions,
+                    normals,
+                    indices,
+                    indexCount,
+                    baseColor,
+                    name: mesh.name + '_prim'
+                });
+            }
+        }
+
+        this.staticDraws = draws;
+        console.log(`[webgl2] Static meshes: ${draws.length} draw calls`);
+    }
+
     setupGL() {
         const gl = this.gl;
 
@@ -204,6 +279,7 @@ class WebGL2AvatarRenderer {
             out vec4 fragColor;
 
             uniform vec3 uLightDir;
+            uniform vec3 uBaseColor;
             uniform float uTime;
 
             void main() {
@@ -215,7 +291,7 @@ class WebGL2AvatarRenderer {
                 float subsurface = max(dot(normal, normalize(vec3(-uLightDir.x, 0.0, -uLightDir.z))), 0.0);
                 float sss = pow(subsurface, 3.0) * 0.25;
 
-                vec3 baseColor = vec3(0.82, 0.62, 0.52);
+                vec3 baseColor = uBaseColor;
                 vec3 litColor = baseColor * (ambient + diff * 0.65 + sss);
 
                 // Specular
@@ -268,15 +344,59 @@ class WebGL2AvatarRenderer {
             projectionMatrix: gl.getUniformLocation(this.program, 'uProjectionMatrix'),
             normalMatrix: gl.getUniformLocation(this.program, 'uNormalMatrix'),
             lightDir: gl.getUniformLocation(this.program, 'uLightDir'),
+            baseColor: gl.getUniformLocation(this.program, 'uBaseColor'),
             time: gl.getUniformLocation(this.program, 'uTime')
         };
 
         gl.enable(gl.DEPTH_TEST);
         gl.depthFunc(gl.LEQUAL);
-        // gl.enable(gl.CULL_FACE); // disabled: 180° rotation reverses winding
-        // gl.cullFace(gl.BACK);
 
         this.resize(this.canvas.clientWidth, this.canvas.clientHeight);
+    }
+
+    setupStaticBuffers() {
+        const gl = this.gl;
+        for (const draw of this.staticDraws) {
+            const posBuf = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+            gl.bufferData(gl.ARRAY_BUFFER, draw.positions, gl.STATIC_DRAW);
+
+            const normBuf = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, normBuf);
+            gl.bufferData(gl.ARRAY_BUFFER, draw.normals, gl.STATIC_DRAW);
+
+            let idxBuf = null;
+            let indexType = gl.UNSIGNED_SHORT;
+            if (draw.indices) {
+                idxBuf = gl.createBuffer();
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+                gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, draw.indices, gl.STATIC_DRAW);
+                indexType = (draw.indices instanceof Uint32Array) ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
+            }
+
+            const vao = gl.createVertexArray();
+            gl.bindVertexArray(vao);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
+            gl.enableVertexAttribArray(0);
+            gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+
+            gl.bindBuffer(gl.ARRAY_BUFFER, normBuf);
+            gl.enableVertexAttribArray(1);
+            gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 0, 0);
+
+            if (idxBuf) {
+                gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuf);
+            }
+
+            gl.bindVertexArray(null);
+
+            draw.vao = vao;
+            draw.posBuf = posBuf;
+            draw.normBuf = normBuf;
+            draw.idxBuf = idxBuf;
+            draw.indexType = indexType;
+        }
     }
 
     centerCamera() {
@@ -354,10 +474,6 @@ class WebGL2AvatarRenderer {
             }
         }
 
-        // Recompute normals from morphed positions (simple face-normal averaging)
-        // For now, just use base normals + approximate deformation
-        // Full normal recomputation would require face data
-
         // Upload to GPU
         const gl = this.gl;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.posBuffer);
@@ -368,7 +484,6 @@ class WebGL2AvatarRenderer {
     }
 
     setBlendshapes(weights) {
-        // weights is an object like {jawOpen: 0.5, ...}
         const maxTargets = Math.min(this.morphTargetCount, 52);
         for (let i = 0; i < maxTargets; i++) {
             const name = this.blendshapeNames[i];
@@ -401,7 +516,6 @@ class WebGL2AvatarRenderer {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         gl.useProgram(this.program);
-        gl.bindVertexArray(this.vao);
 
         // Camera matrices
         const view = this.lookAt(this.camera.eye, this.camera.center, this.camera.up);
@@ -409,7 +523,7 @@ class WebGL2AvatarRenderer {
         const scale = this.scaleM(16.0, 16.0, 16.0);
         const rotY = this.rotateY(Math.PI);
         const model = this.multiply(rotY, scale);
-        const modelView = this.multiply(model, view); // fixed: model first, then view
+        const modelView = this.multiply(model, view);
         const normalMat = this.normalMatrix(modelView);
 
         gl.uniformMatrix4fv(this.uniforms.projectionMatrix, false, proj);
@@ -418,7 +532,21 @@ class WebGL2AvatarRenderer {
         gl.uniform3f(this.uniforms.lightDir, 0.5, 1.0, 0.5);
         gl.uniform1f(this.uniforms.time, this.time);
 
+        // Draw face (with morph targets)
+        gl.uniform3f(this.uniforms.baseColor, 0.82, 0.62, 0.52);
+        gl.bindVertexArray(this.vao);
         gl.drawElements(gl.TRIANGLES, this.mesh.indexCount, this.indexType, 0);
+
+        // Draw static meshes (hair, body, eyes)
+        for (const draw of this.staticDraws) {
+            gl.uniform3f(this.uniforms.baseColor, draw.baseColor[0], draw.baseColor[1], draw.baseColor[2]);
+            gl.bindVertexArray(draw.vao);
+            if (draw.idxBuf) {
+                gl.drawElements(gl.TRIANGLES, draw.indexCount, draw.indexType, 0);
+            } else {
+                gl.drawArrays(gl.TRIANGLES, 0, draw.indexCount);
+            }
+        }
     }
 
     // Matrix math helpers
@@ -500,6 +628,3 @@ class WebGL2AvatarRenderer {
 }
 
 window.WebGL2AvatarRenderer = WebGL2AvatarRenderer;
-
-
-

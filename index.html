@@ -406,7 +406,8 @@
             initAvatar();
 
             // Initialize TTS
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            // NOTE: AudioContext is created lazily on first user gesture (Safari autoplay policy)
+            // audioCtx will be initialized in doSend() or other click handlers
             if (window.PiperTTS) {
                 piperTTS = new window.PiperTTS('piper-voices/en_US-lessac-medium.onnx', 'piper-voices/en_US-lessac-medium.onnx.json');
                 window.piperTTS = piperTTS;
@@ -576,6 +577,10 @@
 
             // Send message
             async function doSend() {
+                // Lazy-create AudioContext on first user gesture (Safari autoplay policy)
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
                 // Resume audio context on user gesture (required for autoplay)
                 if (audioCtx && audioCtx.state === 'suspended') {
                     try {
