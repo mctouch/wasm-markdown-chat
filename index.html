@@ -180,11 +180,24 @@
 
         // Speak the given text using server-side Piper TTS (correct espeak phonemization)
         async function speakResponse(text) {
-            if (!audioCtx) return;
+            if (!audioCtx) {
+                console.error('[piper-server] audioCtx is null');
+                return;
+            }
             try {
-                // Resume audio context if suspended (browser autoplay policy)
+                // Resume with timeout — resume() can hang if no user gesture
                 if (audioCtx.state === 'suspended') {
-                    await audioCtx.resume();
+                    console.log('[piper-server] Resuming audio context...');
+                    const resumeTimeout = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('resume timeout')), 200)
+                    );
+                    try {
+                        await Promise.race([audioCtx.resume(), resumeTimeout]);
+                        console.log('[piper-server] Context resumed, state:', audioCtx.state);
+                    } catch (e) {
+                        console.warn('[piper-server] Could not resume audio context:', e.message);
+                        // Try to play anyway — sometimes resume() resolves late
+                    }
                 }
                 
                 const voiceSelect = document.getElementById('voice-select');
@@ -484,8 +497,17 @@
 
             if (savedKey) {
                 document.getElementById('api-key-input').value = savedKey;
+                // Auto-start if key exists
+                init_kimi(savedKey);
+                document.getElementById('api-key-overlay').style.display = 'none';
+                document.getElementById('message-input').disabled = false;
+                document.getElementById('send-btn').disabled = false;
+                document.getElementById('talk-btn').disabled = false;
+                document.getElementById('test-a2f-btn').disabled = false;
+                document.getElementById('message-input').focus();
+            } else {
+                document.getElementById('api-key-input').focus();
             }
-            document.getElementById('api-key-input').focus();
 
             // API key save
             const talkBtn = document.getElementById('talk-btn');
@@ -550,7 +572,16 @@
             });
 
             // Send message
-            function doSend() {
+            async function doSend() {
+                // Resume audio context on user gesture (required for autoplay)
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    try {
+                        await audioCtx.resume();
+                        console.log('[AUDIO] Context resumed on send');
+                    } catch (err) {
+                        console.error('[AUDIO] Failed to resume context:', err);
+                    }
+                }
                 const text = msgInput.value.trim();
                 if (!text || isTyping) return;
                 msgInput.value = '';
@@ -616,14 +647,16 @@
             if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 recognition = new SpeechRecognition();
-                recognition.continuous = false;
+                recognition.continuous = true;
                 recognition.interimResults = true;
                 recognition.lang = 'en-US';
                 
+                // Toggle-mode microphone: click to turn on, click again to turn off
+                let micOn = false;
+                let accumulatedText = '';
+                
                 recognition.onstart = () => {
                     talkBtn.classList.add('recording');
-                    talkBtn.textContent = 'Listening...';
-                    msgInput.placeholder = 'Listening...';
                 };
                 
                 recognition.onresult = (event) => {
@@ -638,74 +671,64 @@
                         }
                     }
                     if (finalTranscript) {
-                        msgInput.value = finalTranscript;
-                    } else if (interimTranscript) {
-                        msgInput.value = interimTranscript;
+                        accumulatedText += finalTranscript + ' ';
+                        msgInput.value = accumulatedText.trim();
+                    }
+                    if (interimTranscript) {
+                        msgInput.placeholder = 'Listening: ' + interimTranscript;
                     }
                 };
                 
                 recognition.onerror = (event) => {
                     console.error('[ASR] error:', event.error);
-                    talkBtn.classList.remove('recording');
-                    talkBtn.textContent = 'Talk';
-                    msgInput.placeholder = 'Ask Kimi anything...';
                     if (event.error === 'not-allowed') {
                         msgInput.placeholder = 'Microphone permission denied';
+                        micOn = false;
+                        talkBtn.classList.remove('recording');
+                        talkBtn.textContent = '🎙️ Talk';
+                    } else if (event.error === 'no-speech') {
+                        msgInput.placeholder = 'No speech detected — click 🎙️ Talk to try again';
                     }
                 };
                 
                 recognition.onend = () => {
-                    talkBtn.classList.remove('recording');
-                    talkBtn.textContent = 'Talk';
-                    msgInput.placeholder = 'Ask Kimi anything...';
-                    // Auto-send if we got text
-                    const text = msgInput.value.trim();
-                    if (text && !isTyping) {
-                        doSend();
+                    if (micOn) {
+                        // Unexpected stop while mic should be on (browser timeout) — restart
+                        console.log('[ASR] Restarting continuous recognition');
+                        try { recognition.start(); } catch(e) {}
+                    } else {
+                        // User toggled off — send accumulated text
+                        talkBtn.classList.remove('recording');
+                        talkBtn.textContent = '🎙️ Talk';
+                        msgInput.placeholder = 'Ask Kimi anything...';
+                        const text = msgInput.value.trim();
+                        if (text && !isTyping) {
+                            doSend();
+                        }
+                        accumulatedText = '';
                     }
                 };
+                
+                talkBtn.addEventListener('click', () => {
+                    if (!recognition) return;
+                    micOn = !micOn;
+                    if (micOn) {
+                        accumulatedText = msgInput.value.trim();
+                        if (accumulatedText) accumulatedText += ' ';
+                        msgInput.value = '';
+                        talkBtn.classList.add('recording');
+                        talkBtn.textContent = '🔴 Listening';
+                        try { recognition.start(); } catch(e) {}
+                    } else {
+                        talkBtn.classList.remove('recording');
+                        talkBtn.textContent = '🎙️ Talk';
+                        try { recognition.stop(); } catch(e) {}
+                    }
+                });
             } else {
                 talkBtn.disabled = true;
                 talkBtn.title = 'Speech recognition not supported in this browser';
             }
-
-            // Talk button: hold/drag to record speech, release to send
-            let isRecording = false;
-            talkBtn.addEventListener('mousedown', () => {
-                if (recognition) {
-                    isRecording = true;
-                    msgInput.value = '';
-                    try { recognition.start(); } catch(e) {}
-                }
-            });
-            talkBtn.addEventListener('mouseup', () => {
-                if (recognition && isRecording) {
-                    isRecording = false;
-                    try { recognition.stop(); } catch(e) {}
-                }
-            });
-            talkBtn.addEventListener('mouseleave', () => {
-                if (recognition && isRecording) {
-                    isRecording = false;
-                    try { recognition.stop(); } catch(e) {}
-                }
-            });
-            // Touch support
-            talkBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                if (recognition) {
-                    isRecording = true;
-                    msgInput.value = '';
-                    try { recognition.start(); } catch(e) {}
-                }
-            });
-            talkBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                if (recognition && isRecording) {
-                    isRecording = false;
-                    try { recognition.stop(); } catch(e) {}
-                }
-            });
 
             // A2F Talk button: hold to record, release to send to A2F
             let a2fRecording = false;
