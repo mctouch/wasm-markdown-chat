@@ -23,6 +23,7 @@ class WebGL2AvatarRenderer {
         this.modelBounds = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
         this.aspect = 1;
         this.materialTextures = []; // material index -> WebGLTexture
+        this.materialAlphaModes = []; // material index -> 'OPAQUE' | 'BLEND' | 'MASK'
     }
 
     async loadModel(url) {
@@ -125,6 +126,7 @@ class WebGL2AvatarRenderer {
                     }
                 }
                 this.materialTextures.push(tex);
+                this.materialAlphaModes.push(mat.alphaMode || 'OPAQUE');
             }
         }
     }
@@ -160,14 +162,15 @@ class WebGL2AvatarRenderer {
             'uniform vec3 uBaseColor;',
             'uniform bool uHasTex;',
             'void main(){',
-            '    vec3 baseCol = uHasTex ? texture(uTex, vUV).rgb : uBaseColor;',
+            '    vec4 texCol = uHasTex ? texture(uTex, vUV) : vec4(uBaseColor, 1.0);',
+            '    if (texCol.a < 0.05) discard;',
             '    vec3 L = normalize(vec3(0.5, 1.0, 0.5));',
             '    float diff = max(dot(normalize(vN), L), 0.0);',
             '    float amb = 0.85;',
-            '    vec3 col = baseCol * (amb + diff * 0.35);',
+            '    vec3 col = texCol.rgb * (amb + diff * 0.35);',
             '    float rim = 1.0 - max(dot(normalize(-vP), normalize(vN)), 0.0);',
             '    col += vec3(0.3, 0.4, 0.5) * pow(rim, 3.0) * 0.25;',
-            '    oCol = vec4(col, 1.0);',
+            '    oCol = vec4(col, texCol.a);',
             '}'
         ].join('\n');
         this.prog = this._compile(vsSource, fsSource);
@@ -478,6 +481,19 @@ class WebGL2AvatarRenderer {
                 ? this.materialTextures[draw.materialIdx]
                 : this.defaultTexture;
             const hasTex = (draw.materialIdx >= 0 && this.materialTextures[draw.materialIdx] !== this.defaultTexture);
+            const alphaMode = (draw.materialIdx >= 0 && this.materialAlphaModes[draw.materialIdx])
+                ? this.materialAlphaModes[draw.materialIdx]
+                : 'OPAQUE';
+
+            // Enable blend for transparent materials
+            if (alphaMode === 'BLEND') {
+                gl.enable(gl.BLEND);
+                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+                gl.depthMask(false);
+            } else {
+                gl.disable(gl.BLEND);
+                gl.depthMask(true);
+            }
 
             gl.activeTexture(gl.TEXTURE0);
             gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -490,6 +506,8 @@ class WebGL2AvatarRenderer {
             else gl.drawArrays(gl.TRIANGLES, 0, draw.indexCount);
         }
         gl.bindVertexArray(null);
+        gl.disable(gl.BLEND);
+        gl.depthMask(true);
     }
 
     perspective(fov, aspect, near, far) {
