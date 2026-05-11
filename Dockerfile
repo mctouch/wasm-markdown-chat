@@ -31,7 +31,7 @@ server {
     location ~* \.(wasm|js|mjs|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|glb)$ {
         try_files $uri =404;
         expires 30d;
-        add_header Cache-Control "public, immutable";
+        add_header Cache-Control "public, must-revalidate";
     }
 
     # Never cache index.html
