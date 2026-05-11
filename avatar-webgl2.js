@@ -438,13 +438,12 @@ class WebGL2AvatarRenderer {
 
     centerCamera() {
         const b = this.modelBounds;
-        const cx = (b.min[0] + b.max[0]) / 2;
-        const cy = (b.min[1] + b.max[1]) / 2;
-        const cz = (b.min[2] + b.max[2]) / 2;
-        const dy = b.max[1] - b.min[1];
-        const dz = b.max[2] - b.min[2];
-        const dist = Math.max(dy, dz) * 1.8;
-        this.camera.eye = [cx, cy + dy * 0.5, dist];
+        const sx = 16.0, sy = 16.0, sz = 16.0;
+        const cx = (b.min[0] + b.max[0]) * sx / 2;
+        const cy = b.min[1] * sy + (b.max[1] - b.min[1]) * sy * 0.58;
+        const cz = (b.min[2] + b.max[2]) * sz / 2;
+        const dist = Math.max(8, (b.max[1] - b.min[1]) * sy * 0.22);
+        this.camera.eye = [cx, cy, cz + dist];
         this.camera.center = [cx, cy, cz];
     }
 
@@ -466,7 +465,7 @@ class WebGL2AvatarRenderer {
         const view = this.lookAt(this.camera.eye, this.camera.center, this.camera.up);
         const proj = this.perspective(45 * Math.PI / 180, this.aspect, 0.1, 100);
         const model = this.multiply(this.rotateY(Math.PI), this.scaleM(16, 16, 16));
-        const mv = this.multiply(model, view);
+        const mv = this.multiply(model, view); // Safari: reversed order with transpose=false
         const nm = this.normalMatrix(mv);
 
         gl.useProgram(this.prog);
