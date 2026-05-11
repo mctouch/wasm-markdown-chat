@@ -166,10 +166,10 @@ class WebGL2AvatarRenderer {
             '    if (texCol.a < 0.05) discard;',
             '    vec3 L = normalize(vec3(0.5, 1.0, 0.5));',
             '    float diff = max(dot(normalize(vN), L), 0.0);',
-            '    float amb = 0.85;',
-            '    vec3 col = texCol.rgb * (amb + diff * 0.35);',
+            '    float amb = 0.45;',
+            '    vec3 col = texCol.rgb * (amb + diff * 0.55);',
             '    float rim = 1.0 - max(dot(normalize(-vP), normalize(vN)), 0.0);',
-            '    col += vec3(0.3, 0.4, 0.5) * pow(rim, 3.0) * 0.25;',
+            '    col += vec3(0.2, 0.25, 0.3) * pow(rim, 3.0) * 0.12;',
             '    oCol = vec4(col, texCol.a);',
             '}'
         ].join('\n');
