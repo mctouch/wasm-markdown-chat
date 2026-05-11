@@ -351,9 +351,9 @@ class WebGL2AvatarRenderer {
         const mv = this.multiply(view, model); // standard OpenGL: view * model
         const nm = this.normalMatrix(mv);
 
-        gl.uniformMatrix4fv(this.uloc.p, false, proj);
-        gl.uniformMatrix4fv(this.uloc.mv, false, mv);
-        gl.uniformMatrix3fv(this.uloc.n, false, nm);
+        gl.uniformMatrix4fv(this.uloc.p, true, proj);
+        gl.uniformMatrix4fv(this.uloc.mv, true, mv);
+        gl.uniformMatrix3fv(this.uloc.n, true, nm);
         gl.uniform3f(this.uloc.bc, 1, 1, 1);
 
         // Draw all primitives
