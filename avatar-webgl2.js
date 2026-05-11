@@ -155,7 +155,11 @@ class WebGL2AvatarRenderer {
 
             // Create shared GPU buffers for morphed positions/normals
             this.facePosBuf  = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.facePosBuf);
+            gl.bufferData(gl.ARRAY_BUFFER, facePositions, gl.DYNAMIC_DRAW);
             this.faceNormBuf = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.faceNormBuf);
+            gl.bufferData(gl.ARRAY_BUFFER, faceNormals, gl.DYNAMIC_DRAW);
             this.workPositions = new Float32Array(faceVerts * 3);
             this.workNormals  = new Float32Array(faceVerts * 3);
 
