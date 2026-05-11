@@ -415,13 +415,13 @@ class WebGL2AvatarRenderer {
             for (let t = 0; t < this.morphTargetCount; t++) {
                 const w = this.morphWeights[t] || 0;
                 if (w === 0) continue;
-                const base = t * count * 3;
-                wx += morphTargets[base + i * 3] * w;
-                wy += morphTargets[base + i * 3 + 1] * w;
-                wz += morphTargets[base + i * 3 + 2] * w;
-                nx += morphTargets[base + i * 3] * w;
-                ny += morphTargets[base + i * 3 + 1] * w;
-                nz += morphTargets[base + i * 3 + 2] * w;
+                const target = morphTargets[t];
+                wx += target[i * 3] * w;
+                wy += target[i * 3 + 1] * w;
+                wz += target[i * 3 + 2] * w;
+                nx += target[i * 3] * w;
+                ny += target[i * 3 + 1] * w;
+                nz += target[i * 3 + 2] * w;
             }
             this.workPositions[i * 3] += wx;
             this.workPositions[i * 3 + 1] += wy;
