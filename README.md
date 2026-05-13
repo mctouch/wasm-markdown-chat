@@ -2,6 +2,9 @@
 
 A real-time AI chat application with 3D avatar rendering, featuring WebGPU acceleration with WebGL2 fallback, local LLM inference via vLLM, and neural Text-to-Speech with lip-sync animation.
 
+
+> **🚀 Live Demo:** [https://www.socialartificial.com](https://www.socialartificial.com)  
+> **⚠️ Latest Chrome or Chrome Canary strongly recommended** (WebGPU support required)
 ![App Screenshot 2](./docs/screenshots/Screenshot-2.png)
 ![Architecture Diagram](./docs/architecture.html)
 ![App Screenshot](./docs/screenshots/Screenshot-1.png)
