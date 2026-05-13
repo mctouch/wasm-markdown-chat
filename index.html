@@ -579,6 +579,34 @@
                 if (window.a2fBridge) window.a2fBridge.test();
             });
         }
+
+        // Mouse idle detection: avatar scales to center when idle, shrinks to corner on activity
+        const avatarPanel = document.getElementById('avatar-panel');
+        let idleTimer = null;
+        const IDLE_DELAY_MS = 60000; // 60 seconds of inactivity before expanding
+
+        function setAvatarIdle(isIdle) {
+            if (!avatarPanel) return;
+            if (isIdle) {
+                avatarPanel.classList.add('avatar-idle');
+            } else {
+                avatarPanel.classList.remove('avatar-idle');
+            }
+        }
+
+        function resetIdleTimer() {
+            setAvatarIdle(false);
+            if (idleTimer) clearTimeout(idleTimer);
+            idleTimer = setTimeout(() => setAvatarIdle(true), IDLE_DELAY_MS);
+        }
+
+        window.addEventListener('mousemove', resetIdleTimer);
+        window.addEventListener('mousedown', resetIdleTimer);
+        window.addEventListener('keydown', resetIdleTimer);
+        window.addEventListener('scroll', resetIdleTimer);
+        window.addEventListener('touchstart', resetIdleTimer);
+        // Start idle timer initially
+        idleTimer = setTimeout(() => setAvatarIdle(true), IDLE_DELAY_MS);
         run().catch(e => {
             console.error(e);
             document.getElementById('loading').textContent = 'Error: ' + e;
