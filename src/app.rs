@@ -178,6 +178,8 @@ fn main() {
     }
 
     pub fn render(&mut self) {
+        #[cfg(target_arch = "wasm32")]
+        js_sys::eval("console.log('[Rust] app.render() called')").ok();
         let Some(ref gpu) = self.gpu else { return };
         let Some(ref mut renderer) = self.renderer else { return };
 
