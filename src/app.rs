@@ -76,6 +76,11 @@ fn main() {
         let renderer = MarkdownRenderer::new(&gpu);
         self.gpu = Some(gpu);
         self.renderer = Some(renderer);
+        // Rebuild text buffers with initial document content
+        let doc = self.document.lock().unwrap();
+        if let Some(ref mut renderer) = self.renderer {
+            renderer.rebuild_buffers(&doc, &self.theme);
+        }
     }
 
     pub fn set_viewport(&mut self, width: f32, height: f32) {
