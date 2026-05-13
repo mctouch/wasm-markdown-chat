@@ -1,7 +1,7 @@
 /** A2F-3D Browser Bridge: microphone -> proxy -> blendshape frames -> avatar */
 class A2FBridge {
     constructor(opts) {
-        this.proxyUrl = opts.proxyUrl || 'http://localhost:8100/v1/audio2face/stream';
+        this.proxyUrl = opts.proxyUrl || 'http://192.168.185.22:8100/v1/audio2face/stream';
         this.onBlendshapes = opts.onBlendshapes || (() => {});
         this.onStatus = opts.onStatus || (() => {});
         this.onError = opts.onError || (() => {});
