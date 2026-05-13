@@ -268,13 +268,15 @@
                             if (!isBlinking && demoT >= nextBlinkTime) {
                                 isBlinking = true;
                                 blinkProgress = 0;
+                                console.log("[Blink] Triggered at t=" + demoT.toFixed(1) + "s, next=" + nextBlinkTime.toFixed(1));
                             }
                             let blink = 0;
                             if (isBlinking) {
-                                blinkProgress += dt / 0.15; // 150ms full blink cycle
+                                blinkProgress += dt / 0.30; // 300ms blink cycle
                                 if (blinkProgress >= 1) {
                                     isBlinking = false;
                                     nextBlinkTime = demoT + 60 + Math.random() * 60;
+                                    console.log("[Blink] Complete. Next blink at t=" + nextBlinkTime.toFixed(1) + "s");
                                 } else {
                                     // Parabolic blink: fast close, hold slightly, fast open
                                     blink = Math.sin(blinkProgress * Math.PI) * 0.8;
