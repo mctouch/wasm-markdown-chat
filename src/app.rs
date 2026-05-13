@@ -180,7 +180,16 @@ fn main() {
     pub fn render(&mut self) {
         #[cfg(target_arch = "wasm32")]
         js_sys::eval("console.log('[Rust] app.render() called')").ok();
-        let Some(ref gpu) = self.gpu else { return };
+        let Some(ref gpu) = self.gpu else {
+            #[cfg(target_arch = "wasm32")]
+            js_sys::eval("console.log('[Rust] gpu is None')").ok();
+            return;
+        };
+        let Some(ref mut renderer) = self.renderer else {
+            #[cfg(target_arch = "wasm32")]
+            js_sys::eval("console.log('[Rust] renderer is None')").ok();
+            return;
+        };
         let Some(ref mut renderer) = self.renderer else { return };
 
         let width = self.viewport.0 as u32;
