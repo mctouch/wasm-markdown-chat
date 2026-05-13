@@ -1,7 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 
-export function boot_app(): void;
+export function boot_app(): Promise<void>;
 
 export function connect_avatar_ws(url: string): void;
 
@@ -37,7 +37,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly boot_app: (a: number) => void;
+    readonly boot_app: () => number;
     readonly connect_avatar_ws: (a: number, b: number, c: number) => void;
     readonly get_avatar_ws_status: (a: number) => void;
     readonly get_blendshape_json: (a: number) => void;
@@ -53,11 +53,11 @@ export interface InitOutput {
     readonly render_frame: () => void;
     readonly resize: (a: number, b: number) => void;
     readonly scroll: (a: number) => void;
-    readonly __wasm_bindgen_func_elem_4668: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_4661: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_3029: (a: number, b: number, c: number) => void;
-    readonly __wasm_bindgen_func_elem_472: (a: number, b: number, c: number) => void;
-    readonly __wasm_bindgen_func_elem_472_3: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_4685: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_4678: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_3046: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_561: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_561_3: (a: number, b: number, c: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

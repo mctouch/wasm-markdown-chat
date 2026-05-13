@@ -1,7 +1,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
-export const boot_app: (a: number) => void;
+export const boot_app: () => number;
 export const connect_avatar_ws: (a: number, b: number, c: number) => void;
 export const get_avatar_ws_status: (a: number) => void;
 export const get_blendshape_json: (a: number) => void;
@@ -17,11 +17,11 @@ export const get_streaming_length: () => number;
 export const render_frame: () => void;
 export const resize: (a: number, b: number) => void;
 export const scroll: (a: number) => void;
-export const __wasm_bindgen_func_elem_4668: (a: number, b: number, c: number, d: number) => void;
-export const __wasm_bindgen_func_elem_4661: (a: number, b: number, c: number, d: number) => void;
-export const __wasm_bindgen_func_elem_3029: (a: number, b: number, c: number) => void;
-export const __wasm_bindgen_func_elem_472: (a: number, b: number, c: number) => void;
-export const __wasm_bindgen_func_elem_472_3: (a: number, b: number, c: number) => void;
+export const __wasm_bindgen_func_elem_4685: (a: number, b: number, c: number, d: number) => void;
+export const __wasm_bindgen_func_elem_4678: (a: number, b: number, c: number, d: number) => void;
+export const __wasm_bindgen_func_elem_3046: (a: number, b: number, c: number) => void;
+export const __wasm_bindgen_func_elem_561: (a: number, b: number, c: number) => void;
+export const __wasm_bindgen_func_elem_561_3: (a: number, b: number, c: number) => void;
 export const __wbindgen_export: (a: number, b: number) => number;
 export const __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_export3: (a: number) => void;
