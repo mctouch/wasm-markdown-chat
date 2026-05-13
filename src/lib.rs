@@ -78,7 +78,7 @@ pub fn render_frame() {
             app.render();
         } else {
             #[cfg(target_arch = "wasm32")]
-            js_sys::eval("console.log('[Rust] APP is None')").ok();
+            web_sys::console::log_1(&"[Rust] APP is None".into());
         }
     }
 }

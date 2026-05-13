@@ -179,15 +179,15 @@ fn main() {
 
     pub fn render(&mut self) {
         #[cfg(target_arch = "wasm32")]
-        js_sys::eval("console.log('[Rust] app.render() called')").ok();
+        web_sys::console::log_1(&"[Rust] app.render() called".into());
         let Some(ref gpu) = self.gpu else {
             #[cfg(target_arch = "wasm32")]
-            js_sys::eval("console.log('[Rust] gpu is None')").ok();
+            web_sys::console::log_1(&"[Rust] gpu is None".into());
             return;
         };
         let Some(ref mut renderer) = self.renderer else {
             #[cfg(target_arch = "wasm32")]
-            js_sys::eval("console.log('[Rust] renderer is None')").ok();
+            web_sys::console::log_1(&"[Rust] renderer is None".into());
             return;
         };
         let Some(ref mut renderer) = self.renderer else { return };
