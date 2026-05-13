@@ -53,11 +53,11 @@ export interface InitOutput {
     readonly get_streaming_length: () => number;
     readonly resize: (a: number, b: number) => void;
     readonly scroll: (a: number) => void;
-    readonly __wasm_bindgen_func_elem_4672: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_4665: (a: number, b: number, c: number, d: number) => void;
-    readonly __wasm_bindgen_func_elem_3034: (a: number, b: number, c: number) => void;
-    readonly __wasm_bindgen_func_elem_529: (a: number, b: number, c: number) => void;
-    readonly __wasm_bindgen_func_elem_529_3: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_4666: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_4659: (a: number, b: number, c: number, d: number) => void;
+    readonly __wasm_bindgen_func_elem_3028: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_466: (a: number, b: number, c: number) => void;
+    readonly __wasm_bindgen_func_elem_466_3: (a: number, b: number, c: number) => void;
     readonly __wbindgen_export: (a: number, b: number) => number;
     readonly __wbindgen_export2: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_export3: (a: number) => void;

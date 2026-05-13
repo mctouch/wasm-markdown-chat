@@ -206,6 +206,10 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         queue.write_buffer(&self.instance_buffer, 0, data);
     }
 
+    pub fn instance_count(&self) -> usize {
+        self.instances.len()
+    }
+
     pub fn render<'a>(&'a self, pass: &mut wgpu::RenderPass<'a>) {
         if self.instances.is_empty() {
             return;

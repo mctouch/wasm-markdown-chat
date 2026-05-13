@@ -345,7 +345,11 @@ impl MarkdownRenderer {
 
         if !text_areas.is_empty() {
             #[cfg(target_arch = "wasm32")]
-            js_sys::eval(&format!("window.__textAreas = {}", text_areas.len())).ok();
+            {
+                js_sys::eval(&format!("window.__textAreas = {}", text_areas.len())).ok();
+                js_sys::eval(&format!("window.__rectInstances = {}", self.rect_pipeline.instance_count())).ok();
+                js_sys::eval(&format!("window.__viewport = '{}x{}'", viewport_w, viewport_h)).ok();
+            }
             self.text_pipeline
                 .prepare(&gpu.device, &gpu.queue, text_areas);
             self.text_pipeline.render(pass);
