@@ -105,16 +105,16 @@
     </div>
 
     <!-- Avatar renderer scripts (must load before module) -->
-    <script src="avatar-webgpu.js?v=2152"></script>
-    <script src="avatar-webgl2.js?v=2152"></script>
-    <script src="viseme.js?v=2152"></script>
+    <script src="avatar-webgpu.js?v=2153"></script>
+    <script src="avatar-webgl2.js?v=2153"></script>
+    <script src="viseme.js?v=2153"></script>
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
-    <script src="viseme-sync.js?v=2152"></script>
-    <script src="piper-tts.js?v=2152"></script>
-    <script src="a2f-bridge.js?v=2152"></script>
+    <script src="viseme-sync.js?v=2153"></script>
+    <script src="piper-tts.js?v=2153"></script>
+    <script src="a2f-bridge.js?v=2153"></script>
 
     <script type="module">
-        import init, { boot_app, render_frame, read_pixels, init_kimi, send_message, scroll, resize, is_streaming, get_streaming_length, get_last_assistant_message } from './pkg/wasm_markdown_chat.js?v=2152';
+        import init, { boot_app, render_frame, read_pixels, init_kimi, send_message, scroll, resize, is_streaming, get_streaming_length, get_last_assistant_message } from './pkg/wasm_markdown_chat.js?v=2153';
 
         let isTyping = false;
         let streamingCheckInterval = null;
@@ -797,5 +797,5 @@
             document.getElementById('loading').textContent = 'Error: ' + e;
         });
     </script>
-<script src="safari_debug.js?v=2152"></script></body>
+<script src="safari_debug.js?v=2153"></script></body>
 </html>
