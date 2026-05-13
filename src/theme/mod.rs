@@ -37,7 +37,7 @@ impl Theme {
     pub fn dark() -> Self {
         Self {
             name: "dark".into(),
-            background: ThemeColor::new(0xff, 0x00, 0x00, 0xff),
+            background: ThemeColor::new(0x1a, 0x1a, 0x1a, 0xff),
             surface: ThemeColor::new(0x22, 0x22, 0x22, 0xff),
             text: ThemeColor::new(0xe0, 0xe0, 0xe0, 0xff),
             text_secondary: ThemeColor::new(0x88, 0x88, 0x88, 0xff),

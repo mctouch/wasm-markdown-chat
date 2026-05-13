@@ -74,9 +74,6 @@ pub fn render_frame() {
         if let Some(ref app) = APP {
             let mut app = app.lock().unwrap();
             app.render();
-        } else {
-            #[cfg(target_arch = "wasm32")]
-            web_sys::console::log_1(&"[Rust] APP is None".into());
         }
     }
 }
