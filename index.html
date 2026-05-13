@@ -239,6 +239,9 @@
                 // Start avatar render loop
                 let lastT = performance.now();
                 let demoT = 0;
+                let nextBlinkTime = 2 + Math.random() * 58; // first blink 2-60s after init
+                let blinkProgress = 0;
+                let isBlinking = false;
                 visemeAnimator = new window.VisemeAnimator();
                 window.__visemeAnimator = visemeAnimator;
 
@@ -258,9 +261,25 @@
                             window.visemeSyncWeights = visemeSyncPlayer.getCurrentWeights(audioCtx.currentTime);
                             merged = window.visemeSyncWeights;
                         } else {
-                            // 1. Idle animation (blink, subtle brow)
-                            const blink = (Math.sin(demoT * 0.5) * 0.5 + 0.5) * 0.05;
+                            // 1. Idle animation (random blink, subtle brow)
                             const idleWeights = new Float32Array(52);
+
+                            // Random blink: trigger every 60-120 seconds, blink lasts ~150ms
+                            if (!isBlinking && demoT >= nextBlinkTime) {
+                                isBlinking = true;
+                                blinkProgress = 0;
+                            }
+                            let blink = 0;
+                            if (isBlinking) {
+                                blinkProgress += dt / 0.15; // 150ms full blink cycle
+                                if (blinkProgress >= 1) {
+                                    isBlinking = false;
+                                    nextBlinkTime = demoT + 60 + Math.random() * 60;
+                                } else {
+                                    // Parabolic blink: fast close, hold slightly, fast open
+                                    blink = Math.sin(blinkProgress * Math.PI) * 0.8;
+                                }
+                            }
                             idleWeights[window.ARKIT_ORDER.indexOf('eyeBlinkLeft')] = blink;
                             idleWeights[window.ARKIT_ORDER.indexOf('eyeBlinkRight')] = blink;
                             idleWeights[window.ARKIT_ORDER.indexOf('browInnerUp')] = Math.abs(Math.sin(demoT * 0.3)) * 0.08;
@@ -618,6 +637,105 @@
         window.addEventListener('touchstart', resetIdleTimer);
         // Start idle timer initially
         idleTimer = setTimeout(() => setAvatarIdle(true), IDLE_DELAY_MS);
+        // === Avatar proactive speech: time + thoughts ===
+        const THOUGHTS_AND_TIPS = [
+            "Tip: Hold the Talk button to speak your message instead of typing.",
+            "Tip: Try the A2F Talk button to see neural lip-sync with your own voice.",
+            "Tip: You can change my voice between Amy and Lessac in the dropdown.",
+            "Tip: Click the speaker icon to toggle auto-speak for responses.",
+            "Did you know? I can process both text and voice input in the same conversation.",
+            "Thought: The best conversations happen when you stop typing and start talking.",
+            "Tip: Press Enter to send a message, or Shift+Enter for a new line.",
+            "Tip: Scroll up to see your conversation history — it stays in context.",
+            "Thought: Every question is a good question. What would you like to explore?",
+            "Tip: The avatar will scale up when you're idle, and shrink back when you move the mouse.",
+            "Did you know? A2F stands for Audio to Face — it converts your speech into facial animation in real time.",
+            "Thought: The future of AI is not just text on a screen, but presence you can see and hear.",
+        ];
+
+        let lastInteractionTime = Date.now();
+        let lastThoughtHour = -1;
+        let thoughtMinute = Math.floor(Math.random() * 60); // random minute within the hour
+        let lastQuarterAnnounced = -1;
+
+        // Track all user interactions for "not being used" detection
+        function updateInteractionTime() {
+            lastInteractionTime = Date.now();
+        }
+        window.addEventListener('mousemove', updateInteractionTime);
+        window.addEventListener('mousedown', updateInteractionTime);
+        window.addEventListener('keydown', updateInteractionTime);
+        window.addEventListener('scroll', updateInteractionTime);
+        window.addEventListener('touchstart', updateInteractionTime);
+
+        function speakText(text) {
+            // Reuse the TTS pipeline
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            if (isSafari && window.speechSynthesis) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.0; utterance.pitch = 1.0;
+                if (visemeAnimator) visemeAnimator.speak(text, text.length / 12);
+                window.speechSynthesis.speak(utterance);
+                return;
+            }
+            // Piper TTS
+            const ttsUrl = window.location.protocol + '//' + window.location.hostname + ':8200/v1/tts/synthesize';
+            fetch(ttsUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) })
+            .then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error('TTS failed')))
+            .then(buf => audioCtx.decodeAudioData(buf))
+            .then(audioBuffer => {
+                const source = audioCtx.createBufferSource();
+                source.buffer = audioBuffer;
+                source.connect(audioCtx.destination);
+                source.start();
+            })
+            .catch(err => console.error('[proactive speech]', err));
+        }
+
+        function announceTime() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const h12 = hours % 12 || 12;
+            const mStr = minutes === 0 ? "o'clock" : (minutes < 10 ? 'oh ' + minutes : minutes);
+            const text = "The time is " + h12 + " " + mStr + " " + ampm + ".";
+            speakText(text);
+        }
+
+        function announceThought() {
+            const thought = THOUGHTS_AND_TIPS[Math.floor(Math.random() * THOUGHTS_AND_TIPS.length)];
+            speakText(thought);
+        }
+
+        // Check every 60 seconds
+        setInterval(() => {
+            const now = new Date();
+            const minutes = now.getMinutes();
+            const hours = now.getHours();
+            const seconds = now.getSeconds();
+            const msSinceInteraction = Date.now() - lastInteractionTime;
+
+            // Quarter-hour time announcement: every 15 min (:00, :15, :30, :45)
+            // Only if idle for at least 30 seconds and not already announced this quarter
+            const quarter = Math.floor(minutes / 15);
+            const quarterKey = hours * 4 + quarter;
+            if (minutes % 15 === 0 && seconds < 5 && msSinceInteraction > 30000 && lastQuarterAnnounced !== quarterKey) {
+                lastQuarterAnnounced = quarterKey;
+                announceTime();
+            }
+
+            // Hourly thought/tip: at a random minute within the hour
+            // Only if idle for at least 2 minutes and not already spoken this hour
+            if (minutes === thoughtMinute && seconds < 5 && msSinceInteraction > 120000 && lastThoughtHour !== hours) {
+                lastThoughtHour = hours;
+                thoughtMinute = Math.floor(Math.random() * 60); // pick next hour's minute
+                announceThought();
+            }
+        }, 60000);
+
         run().catch(e => {
             console.error(e);
             document.getElementById('loading').textContent = 'Error: ' + e;
