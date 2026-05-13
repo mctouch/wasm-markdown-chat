@@ -2,6 +2,7 @@
 
 A real-time AI chat application with 3D avatar rendering, featuring WebGPU acceleration with WebGL2 fallback, local LLM inference via vLLM, and neural Text-to-Speech with lip-sync animation.
 
+![App Screenshot 2](./docs/screenshots/Screenshot-2.png)
 ![Architecture Diagram](./docs/architecture.html)
 ![App Screenshot](./docs/screenshots/Screenshot-1.png)
 
