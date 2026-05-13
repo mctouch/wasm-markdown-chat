@@ -574,36 +574,90 @@
                 if (e.key === 'Enter') doSend();
             });
 
-            // Talk button: hold to record, release to send to A2F
-            talkBtn.addEventListener('mousedown', () => {
-                if (window.a2fBridge) window.a2fBridge.startRecording();
+            // Talk button: hold to record, release to send
+            // Falls back to Web Speech API if A2F is unavailable
+            let speechRecognition = null;
+            let isRecording = false;
+            
+            function initSpeechRecognition() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) return null;
+                const rec = new SpeechRecognition();
+                rec.continuous = false;
+                rec.interimResults = false;
+                rec.lang = 'en-US';
+                return rec;
+            }
+            
+            function startTalkRecording() {
+                isRecording = true;
                 talkBtn.classList.add('recording');
                 talkBtn.textContent = 'Recording...';
-            });
-            talkBtn.addEventListener('mouseup', () => {
-                if (window.a2fBridge) window.a2fBridge.stopRecording();
+                
+                // Try A2F first
+                if (window.a2fBridge && window.a2fBridge.startRecording) {
+                    try {
+                        window.a2fBridge.startRecording();
+                        console.log('[Talk] Using A2F recording');
+                        return;
+                    } catch(e) {
+                        console.log('[Talk] A2F failed, falling back to Speech API');
+                    }
+                }
+                
+                // Fallback to Web Speech API
+                if (!speechRecognition) speechRecognition = initSpeechRecognition();
+                if (speechRecognition) {
+                    speechRecognition.onresult = (event) => {
+                        const text = event.results[0][0].transcript;
+                        console.log('[Talk] Speech recognized:', text);
+                        msgInput.value = text;
+                        doSend();
+                    };
+                    speechRecognition.onerror = (event) => {
+                        console.error('[Talk] Speech error:', event.error);
+                        isRecording = false;
+                        talkBtn.classList.remove('recording');
+                        talkBtn.textContent = 'Talk';
+                    };
+                    speechRecognition.onend = () => {
+                        isRecording = false;
+                        talkBtn.classList.remove('recording');
+                        talkBtn.textContent = 'Talk';
+                    };
+                    speechRecognition.start();
+                    console.log('[Talk] Using Web Speech API');
+                } else {
+                    console.error('[Talk] No speech recognition available');
+                    alert('Speech recognition not supported in this browser');
+                }
+            }
+            
+            function stopTalkRecording() {
+                if (!isRecording) return;
+                isRecording = false;
                 talkBtn.classList.remove('recording');
                 talkBtn.textContent = 'Talk';
-            });
-            talkBtn.addEventListener('mouseleave', () => {
+                
                 if (window.a2fBridge && window.a2fBridge.isRecording) {
                     window.a2fBridge.stopRecording();
-                    talkBtn.classList.remove('recording');
-                    talkBtn.textContent = 'Talk';
+                } else if (speechRecognition) {
+                    speechRecognition.stop();
                 }
+            }
+            
+            talkBtn.addEventListener('mousedown', startTalkRecording);
+            talkBtn.addEventListener('mouseup', stopTalkRecording);
+            talkBtn.addEventListener('mouseleave', () => {
+                if (isRecording) stopTalkRecording();
             });
-            // Touch support
             talkBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (window.a2fBridge) window.a2fBridge.startRecording();
-                talkBtn.classList.add('recording');
-                talkBtn.textContent = 'Recording...';
+                startTalkRecording();
             });
             talkBtn.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                if (window.a2fBridge) window.a2fBridge.stopRecording();
-                talkBtn.classList.remove('recording');
-                talkBtn.textContent = 'Talk';
+                stopTalkRecording();
             });
 
             // Test A2F button
