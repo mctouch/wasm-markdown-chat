@@ -32,14 +32,7 @@
         #input-bar button:disabled { background: #555; cursor: not-allowed; }
         #input-bar button.recording { background: #ef4444; }
         #input-bar button.recording:hover { background: #dc2626; }
-        #api-key-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        #api-key-box { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 24px; width: 400px; max-width: 90%; }
-        #api-key-box h2 { color: #fff; margin-bottom: 12px; font-size: 18px; }
-        #api-key-box p { color: #888; margin-bottom: 16px; font-size: 13px; line-height: 1.5; }
-        #api-key-box input { width: 100%; height: 40px; background: #2a2a2a; border: 1px solid #444; border-radius: 8px; color: #fff; padding: 0 12px; font-size: 14px; margin-bottom: 12px; }
-        #api-key-box button { width: 100%; height: 40px; background: #3b82f6; border: none; border-radius: 8px; color: #fff; font-weight: 500; cursor: pointer; }
-        #api-key-box button:hover { background: #2563eb; }
-        #settings-btn { position: fixed; top: 12px; right: 12px; width: 32px; height: 32px; background: #2a2a2a; border: 1px solid #444; border-radius: 8px; color: #888; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 50; }
+
         #typing {
             position: absolute;
             left: 16px;
@@ -117,16 +110,6 @@
     </style>
 </head>
 <body>
-    <div id="api-key-overlay">
-        <div id="api-key-box">
-            <h2>Enter Kimi API Key</h2>
-            <p>Your API key is stored locally in your browser and sent directly to the Kimi API (api.moonshot.ai). It is never stored on our servers.</p>
-            <input type="password" id="api-key-input" placeholder="sk-..." />
-            <button id="api-key-save">Start Chat</button>
-            <button id="api-key-clear" style="margin-top:8px;width:100%;height:32px;background:transparent;border:1px solid #444;border-radius:8px;color:#888;font-size:12px;cursor:pointer;">Clear Saved Key</button>
-        </div>
-    </div>
-
     <div id="canvas-container">
         <div id="loading">Loading WebGPU...</div>
         <div id="avatar-panel">
@@ -134,7 +117,6 @@
         </div>
         <button id="scroll-bottom" title="Scroll to bottom">↓</button>
     </div>
-    <button id="settings-btn" title="Change API Key">&#9881;</button>
     <div id="input-bar">
         <div id="typing">Kimi is thinking...</div>
         <input type="text" id="message-input" placeholder="Ask Kimi anything..." disabled />
@@ -153,16 +135,16 @@
     </div>
 
     <!-- Avatar renderer scripts (must load before module) -->
-    <script src="avatar-webgpu.js?v=2073"></script>
-    <script src="avatar-webgl2.js?v=2073"></script>
-    <script src="viseme.js?v=2073"></script>
+    <script src="avatar-webgpu.js?v=2074"></script>
+    <script src="avatar-webgl2.js?v=2074"></script>
+    <script src="viseme.js?v=2074"></script>
     <script src="node_modules/onnxruntime-web/dist/ort.min.js"></script>
-    <script src="viseme-sync.js?v=2073"></script>
-    <script src="piper-tts.js?v=2073"></script>
-    <script src="a2f-bridge.js?v=2073"></script>
+    <script src="viseme-sync.js?v=2074"></script>
+    <script src="piper-tts.js?v=2074"></script>
+    <script src="a2f-bridge.js?v=2074"></script>
 
     <script type="module">
-        import init, { boot_app, render_frame, read_pixels, init_kimi, send_message, scroll, resize, is_streaming, get_streaming_length, get_last_assistant_message } from './pkg/wasm_markdown_chat.js?v=2073';
+        import init, { boot_app, render_frame, read_pixels, init_kimi, send_message, scroll, resize, is_streaming, get_streaming_length, get_last_assistant_message } from './pkg/wasm_markdown_chat.js?v=2074';
 
         let isTyping = false;
         let streamingCheckInterval = null;
@@ -492,64 +474,13 @@
             const typingIndicator = document.getElementById('typing');
             const scrollBottomBtn = document.getElementById('scroll-bottom');
 
-            // Check for saved API key — pre-fill but don't auto-hide
-            let savedKey = localStorage.getItem('kimi_api_key');
-            if (savedKey && savedKey.startsWith('sk-test-')) {
-                localStorage.removeItem('kimi_api_key');
-                savedKey = null;
-            }
-
-            if (savedKey) {
-                document.getElementById('api-key-input').value = savedKey;
-                // Auto-start if key exists
-                init_kimi(savedKey);
-                document.getElementById('api-key-overlay').style.display = 'none';
-                document.getElementById('message-input').disabled = false;
-                document.getElementById('send-btn').disabled = false;
-                document.getElementById('talk-btn').disabled = false;
-                document.getElementById('test-a2f-btn').disabled = false;
-                document.getElementById('message-input').focus();
-            } else {
-                document.getElementById('api-key-input').focus();
-            }
-
-            // API key save
-            const talkBtn = document.getElementById('talk-btn');
-            const testA2FBtn = document.getElementById('test-a2f-btn');
-            document.getElementById('api-key-save').addEventListener('click', () => {
-                const key = document.getElementById('api-key-input').value.trim();
-                if (key) {
-                    localStorage.setItem('kimi_api_key', key);
-                    init_kimi(key);
-                    document.getElementById('api-key-overlay').style.display = 'none';
-                    msgInput.disabled = false;
-                    sendBtn.disabled = false;
-                    talkBtn.disabled = false;
-                    testA2FBtn.disabled = false;
-                    msgInput.focus();
-                }
-            });
-
-            document.getElementById('api-key-clear').addEventListener('click', () => {
-                localStorage.removeItem('kimi_api_key');
-                document.getElementById('api-key-input').value = '';
-                document.getElementById('api-key-input').focus();
-            });
-
-            document.getElementById('api-key-input').addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    document.getElementById('api-key-save').click();
-                }
-            });
-
-            // Settings button re-opens overlay
-            document.getElementById('settings-btn').addEventListener('click', () => {
-                const overlay = document.getElementById('api-key-overlay');
-                overlay.style.display = 'flex';
-                const input = document.getElementById('api-key-input');
-                input.value = localStorage.getItem('kimi_api_key') || '';
-                input.focus();
-            });
+            // Auto-init Kimi client (no API key UI needed)
+            init_kimi();
+            document.getElementById('message-input').disabled = false;
+            document.getElementById('send-btn').disabled = false;
+            document.getElementById('talk-btn').disabled = false;
+            document.getElementById('test-a2f-btn').disabled = false;
+            document.getElementById('message-input').focus();
 
             // Scroll to bottom button
             scrollBottomBtn.addEventListener('click', () => {

@@ -58,9 +58,9 @@ pub struct KimiClient {
 }
 
 impl KimiClient {
-    pub fn new(api_key: String) -> Self {
+    pub fn new() -> Self {
         Self {
-            api_key,
+            api_key: "sk-eXbDzicqr3lDQMxgEsr1JPJ9B92wwzwm4dy3NUrwhppYDnxx".into(),
             messages: Vec::new(),
             model: "moonshot-v1-8k".into(),
             max_history: 20,

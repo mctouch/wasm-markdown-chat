@@ -61,11 +61,11 @@ class A2FBridge {
         if (floatSamples.length < 1600) {
             this.onStatus('Too short');
             this.onDone();
-            if (this.audioCtx) await this.audioCtx.close();
+            if (this.audioCtx && this.audioCtx.state !== 'closed') await this.audioCtx.close();
             return;
         }
 
-        if (this.audioCtx) {
+        if (this.audioCtx && this.audioCtx.state !== 'closed') {
             await this.audioCtx.close();
         }
         await this._sendToA2F(floatSamples);

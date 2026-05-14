@@ -202,11 +202,11 @@ pub fn is_streaming() -> bool {
 }
 
 #[wasm_bindgen]
-pub fn init_kimi(api_key: String) {
+pub fn init_kimi() {
     unsafe {
         if let Some(ref app) = APP {
             let mut app = app.lock().unwrap();
-            app.kimi = Some(crate::chat::kimi::KimiClient::new(api_key));
+            app.kimi = Some(crate::chat::kimi::KimiClient::new());
         }
     }
 }
